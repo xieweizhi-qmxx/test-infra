@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -136,12 +135,19 @@ func main() {
 
 	pm := plugins.NewPluginManager()
 
-	if err := initPlugins(configAgent.Config, pluginAgent, pm, cs); err != nil {
+	pluginList, err := initPlugins(configAgent.Config, pluginAgent, pm, cs)
+	if err != nil {
 		logrus.WithError(err).Fatal("Error loading plugins.")
 	}
 
 	if err := pluginAgent.Start(o.pluginConfig, true, pm.HelpProviders()); err != nil {
 		logrus.WithError(err).Fatal("Error loading plugins config.")
+	}
+
+	for _, v := range pluginList {
+		if p, ok := v.(plugins.PluginSpread); ok {
+			p.HandleDefaultTask()
+		}
 	}
 
 	defer interrupts.WaitForGracefulShutdown()
@@ -203,10 +209,10 @@ func buildClients(o *options, secretAgent *secret.Agent, pluginAgent *plugins.Co
 		return nil, err
 	}
 
-	prowJobClient, err := o.kubernetes.ProwJobClient(cfg().ProwJobNamespace, o.dryRun)
-	if err != nil {
-		return nil, fmt.Errorf("Error getting ProwJob client for infrastructure cluster: %w", err)
-	}
+	/*	prowJobClient, err := o.kubernetes.ProwJobClient(cfg().ProwJobNamespace, o.dryRun)
+		if err != nil {
+			return nil, fmt.Errorf("Error getting ProwJob client for infrastructure cluster: %w ", err)
+		}*/
 
 	mdYAMLEnabled := func(org, repo string) bool {
 		return pluginAgent.Config().MDYAMLEnabled(org, repo)
@@ -223,7 +229,7 @@ func buildClients(o *options, secretAgent *secret.Agent, pluginAgent *plugins.Co
 		giteeClient:    giteeClient,
 		giteeGitClient: giteeGitClient,
 		ownersClient:   ownersClient,
-		prowJobClient:  prowJobClient,
+		//prowJobClient:  prowJobClient,
 	}
 	return cs, nil
 }

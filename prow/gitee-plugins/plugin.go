@@ -12,4 +12,9 @@ type Plugin interface {
 	HelpProvider(enabledRepos []config.OrgRepo) (*pluginhelp.PluginHelp, error)
 }
 
+type PluginSpread interface {
+	Plugin
+	HandleDefaultTask()
+}
+
 type GetPluginConfig func(string) PluginConfig

@@ -27,3 +27,6 @@ secret.yaml
 
 # Binaries
 logexporter/cmd/logexporter
+
+#cache file
+RepoHandleCacheConfig.json
