@@ -208,12 +208,12 @@ func buildClients(o *options, secretAgent *secret.Agent, pluginAgent *plugins.Co
 	if err != nil {
 		return nil, err
 	}
-
-	/*	prowJobClient, err := o.kubernetes.ProwJobClient(cfg().ProwJobNamespace, o.dryRun)
-		if err != nil {
-			return nil, fmt.Errorf("Error getting ProwJob client for infrastructure cluster: %w ", err)
-		}*/
-
+	/*
+	prowJobClient, err := o.kubernetes.ProwJobClient(cfg().ProwJobNamespace, o.dryRun)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting ProwJob client for infrastructure cluster: %w", err)
+	}
+	*/
 	mdYAMLEnabled := func(org, repo string) bool {
 		return pluginAgent.Config().MDYAMLEnabled(org, repo)
 	}
