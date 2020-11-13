@@ -3827,7 +3827,7 @@ def go_repositories():
         build_file_generation = "on",
         build_file_proto_mode = "disable",
         importpath = "gitee.com/openeuler/go-gitee",
-        sum = "h1:TQrS/LP/DFXLqM+lVrZd4nL2pbTrqiXABGT9PJepVTA=",
+        sum = "h1:Uk05BpyrV24VNVFPd47lEOg0OmUMgnIgd50gnyWqC8s=",
         version = "v0.0.0-20201111035308-c4384bf8d333",
     )
     go_repository(
