@@ -16,14 +16,14 @@ import (
 	originp "k8s.io/test-infra/prow/plugins"
 )
 
-func initPlugins(cfg prowConfig.Getter, agent *plugins.ConfigAgent, pm plugins.Plugins, cs *clients) ([]plugins.Plugin,error)  {
+func initPlugins(cfg prowConfig.Getter, agent *plugins.ConfigAgent, pm plugins.Plugins, cs *clients) ([]plugins.Plugin, error) {
 	gpc := func(name string) plugins.PluginConfig {
 		return agent.Config().GetPluginConfig(name)
 	}
 
 	botname, err := cs.giteeClient.BotName()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	var v []plugins.Plugin
@@ -44,7 +44,7 @@ func initPlugins(cfg prowConfig.Getter, agent *plugins.ConfigAgent, pm plugins.P
 
 	}
 
-	return v,nil
+	return v, nil
 }
 
 func genHelpProvider(h plugins.HelpProvider) originp.HelpProvider {

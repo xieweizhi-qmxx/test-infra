@@ -36,16 +36,16 @@ func (c *cache) cacheInit() error {
 	return err
 }
 
-func (c *cache) loadCache() ([]repoFile,error) {
+func (c *cache) loadCache() ([]repoFile, error) {
 	c.Lock()
 	defer c.Unlock()
 	var cacheRepos []repoFile
 	data, err := ioutil.ReadFile(c.filePath)
 	if err != nil {
-		return cacheRepos,err
+		return cacheRepos, err
 	}
 	err = json.Unmarshal(data, &cacheRepos)
-	return cacheRepos,err
+	return cacheRepos, err
 }
 
 func (c *cache) saveCache(repoFiles []repoFile) error {

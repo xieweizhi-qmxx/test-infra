@@ -18,14 +18,7 @@ package main
 
 import (
 	"flag"
-	"net/http"
-	"os"
-	"strconv"
-	"time"
-
 	"github.com/sirupsen/logrus"
-	"k8s.io/test-infra/prow/interrupts"
-
 	"k8s.io/test-infra/pkg/flagutil"
 	prowv1 "k8s.io/test-infra/prow/client/clientset/versioned/typed/prowjobs/v1"
 	"k8s.io/test-infra/prow/config"
@@ -36,26 +29,28 @@ import (
 	hook "k8s.io/test-infra/prow/gitee-hook"
 	plugins "k8s.io/test-infra/prow/gitee-plugins"
 	originh "k8s.io/test-infra/prow/hook"
+	"k8s.io/test-infra/prow/interrupts"
 	"k8s.io/test-infra/prow/logrusutil"
 	"k8s.io/test-infra/prow/metrics"
 	"k8s.io/test-infra/prow/pjutil"
 	pluginhelp "k8s.io/test-infra/prow/pluginhelp/hook"
 	"k8s.io/test-infra/prow/repoowners"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
 )
 
 type options struct {
-	port int
-
-	configPath    string
-	jobConfigPath string
-	pluginConfig  string
-
-	dryRun      bool
-	gracePeriod time.Duration
-	kubernetes  prowflagutil.KubernetesOptions
-	bugzilla    prowflagutil.BugzillaOptions
-	gitee       prowflagutil.GiteeOptions
-
+	port              int
+	configPath        string
+	jobConfigPath     string
+	pluginConfig      string
+	dryRun            bool
+	gracePeriod       time.Duration
+	kubernetes        prowflagutil.KubernetesOptions
+	bugzilla          prowflagutil.BugzillaOptions
+	gitee             prowflagutil.GiteeOptions
 	webhookSecretFile string
 	slackTokenFile    string
 }
@@ -209,10 +204,10 @@ func buildClients(o *options, secretAgent *secret.Agent, pluginAgent *plugins.Co
 		return nil, err
 	}
 	/*
-	prowJobClient, err := o.kubernetes.ProwJobClient(cfg().ProwJobNamespace, o.dryRun)
-	if err != nil {
-		return nil, fmt.Errorf("Error getting ProwJob client for infrastructure cluster: %w", err)
-	}
+		prowJobClient, err := o.kubernetes.ProwJobClient(cfg().ProwJobNamespace, o.dryRun)
+		if err != nil {
+			return nil, fmt.Errorf("Error getting ProwJob client for infrastructure cluster: %w", err)
+		}
 	*/
 	mdYAMLEnabled := func(org, repo string) bool {
 		return pluginAgent.Config().MDYAMLEnabled(org, repo)

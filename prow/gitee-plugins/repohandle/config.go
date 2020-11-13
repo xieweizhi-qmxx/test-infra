@@ -38,7 +38,7 @@ func (r Repository) IsCommentable() bool {
 }
 
 type Repos struct {
-	Community    string    `json:"community"`
+	Community    string       `json:"community"`
 	Repositories []Repository `json:"repositories"`
 }
 

@@ -38,13 +38,13 @@ type Client interface {
 	MergePR(owner, repo string, number int, opt sdk.PullRequestMergePutParam) error
 
 	GetRepos(org string) ([]sdk.Project, error)
-	CreateRepo(owner string,param sdk.RepositoryPostParam) (sdk.Project, error)
-	GetPathContent(owner,repo,path,ref string)(sdk.Content,error)
-	UpdateRepo(owner,repo string,bp sdk.RepoPatchParam) error
-	GetRepoAllBranch(owner,repo string)([]sdk.Branch,error)
+	CreateRepo(owner string, param sdk.RepositoryPostParam) (sdk.Project, error)
+	GetPathContent(owner, repo, path, ref string) (sdk.Content, error)
+	UpdateRepo(owner, repo string, bp sdk.RepoPatchParam) error
+	GetRepoAllBranch(owner, repo string) ([]sdk.Branch, error)
 	CreateBranch(owner, repo, ref, bName string) (sdk.CompleteBranch, error)
-	CancelBranchProtected(owner,repo,bName string) error
-	SetBranchProtected(owner,repo,bName string) (sdk.CompleteBranch,error)
+	CancelBranchProtected(owner, repo, bName string) error
+	SetBranchProtected(owner, repo, bName string) (sdk.CompleteBranch, error)
 }
 
 type ListPullRequestOpt struct {

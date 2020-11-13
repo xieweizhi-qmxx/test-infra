@@ -292,18 +292,18 @@ func getPushEventChangeFile(e *sdk.PushEvent, files []repoFile) ([]int, bool) {
 	var fIdx []int
 	for _, v := range e.Commits {
 		if len(v.Added) > 0 {
-			for _,fn := range v.Added{
+			for _, fn := range v.Added {
 				fns[fn] = struct{}{}
 			}
 		}
 		if len(v.Modified) > 0 {
-			for _,fn := range v.Modified{
+			for _, fn := range v.Modified {
 				fns[fn] = struct{}{}
 			}
 		}
 	}
 	if len(fns) == 0 {
-		return fIdx,false
+		return fIdx, false
 	}
 	find := false
 	for k, v := range files {
@@ -317,10 +317,10 @@ func getPushEventChangeFile(e *sdk.PushEvent, files []repoFile) ([]int, bool) {
 		if !strings.Contains(*e.Ref, ref) {
 			continue
 		}
-		if _,ex := fns[v.Path];ex {
+		if _, ex := fns[v.Path]; ex {
 			find = true
 			fIdx = append(fIdx, k)
 		}
 	}
-	return fIdx,find
+	return fIdx, find
 }
