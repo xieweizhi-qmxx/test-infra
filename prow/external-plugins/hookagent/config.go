@@ -12,18 +12,19 @@ type hookAgentConfig struct {
 
 type ScriptCfg struct {
 	Name     string   `json:"name"`
+	Process  string   `json:"process"`
 	Endpoint string   `json:"endpoint"`
 	Repos    []string `json:"repos"`
 }
 
 func (hac *hookAgentConfig) getNeedHandleScript(fullName string) map[string]ScriptCfg {
-	needs := make(map[string]ScriptCfg,0)
-	ns := strings.Split(fullName,"/")[0]
-	for _,s := range hac.Scripts {
+	needs := make(map[string]ScriptCfg, 0)
+	ns := strings.Split(fullName, "/")[0]
+	for _, s := range hac.Scripts {
 		if len(s.Repos) == 0 {
 			continue
 		}
-		for _,repo := range s.Repos{
+		for _, repo := range s.Repos {
 			if repo != fullName && repo != ns {
 				continue
 			}

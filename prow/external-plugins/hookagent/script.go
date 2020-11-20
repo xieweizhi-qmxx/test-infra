@@ -51,7 +51,7 @@ func CreateScript(scs map[string]ScriptCfg, log *logrus.Entry) []Script {
 	for k, v := range scs {
 		switch k {
 		case ReviewToolScript:
-			sec := NewReviewTool(v.Endpoint, v.Name, log)
+			sec := NewReviewTool(v.Process,v.Endpoint, v.Name, log)
 			scripts = append(scripts, Script{sec})
 		}
 

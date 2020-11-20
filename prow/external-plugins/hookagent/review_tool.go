@@ -9,13 +9,14 @@ import (
 const ReviewToolScript = "review_tool"
 
 type reviewTool struct {
+	process string
 	endpoint string
 	name string
 	l *logrus.Entry
 }
 
-func NewReviewTool(ep,name string,log *logrus.Entry) Scenario {
-	rt := reviewTool{endpoint: ep,name: name}
+func NewReviewTool(proc,ep,name string,log *logrus.Entry) Scenario {
+	rt := reviewTool{process:proc,endpoint: ep,name: name}
 	if log != nil {
 		log.WithField("script", ReviewToolScript)
 	}else {
@@ -39,7 +40,7 @@ func (rt *reviewTool) handleReviewPullRequest(url *string) error{
 	if url == nil {
 		return fmt.Errorf("the pull request URL is nil")
 	}
-	cmd, err := ExecCmd(rt.endpoint,"-u", *url)
+	cmd, err := ExecCmd(rt.process,rt.endpoint,"-u", *url)
 	if err != nil {
 		return err
 	}
