@@ -15,8 +15,8 @@ type reviewTool struct {
 	l *logrus.Entry
 }
 
-func NewReviewTool(proc,ep,name string,log *logrus.Entry) Scenario {
-	rt := reviewTool{process:proc,endpoint: ep,name: name}
+func newReviewTool(sc ScriptCfg,log *logrus.Entry) Scenario {
+	rt := reviewTool{process:sc.Process,endpoint: sc.Endpoint,name: sc.Name}
 	if log != nil {
 		log.WithField("script", ReviewToolScript)
 	}else {
@@ -27,7 +27,7 @@ func NewReviewTool(proc,ep,name string,log *logrus.Entry) Scenario {
 }
 
 func (rt *reviewTool) HandlePullRequestHook(event gitee.PullRequestEvent)   {
-	if *event.Action == "update" && *event.ActionDesc == "source_branch_changed" {
+	if *event.Action == PRUpdate && *event.ActionDesc == PRSourceBranchChange {
 		err := rt.handleReviewPullRequest(event.URL)
 		if err != nil {
 			rt.l.Error(err)

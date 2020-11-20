@@ -87,7 +87,7 @@ func (s *server) handleEvent(eventType,eventGUID string,payload []byte) error {
 		return fmt.Errorf("invalidate webhook")
 	}
 	cfg := s.config()
-	scripts := CreateScript(cfg.getNeedHandleScript(fullName),s.log)
+	scripts := GenScript(cfg.getNeedHandleScript(fullName),s.log)
 	if len(scripts) == 0 {
 		s.log.Info("No script needs to execute these events")
 		return nil
@@ -96,7 +96,7 @@ func (s *server) handleEvent(eventType,eventGUID string,payload []byte) error {
 		s.wg.Add(1)
 		go func(scenario Script) {
 			defer s.wg.Done()
-			scenario.Exec(eventType,event)
+			scenario.ExecScript(eventType,event)
 		}(v)
 	}
 	return nil
