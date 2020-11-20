@@ -29,7 +29,7 @@ func (rt *reviewTool) HandlePullRequestHook(event gitee.PullRequestEvent)   {
 	if *event.Action == "update" && *event.ActionDesc == "source_branch_changed" {
 		err := rt.handleReviewPullRequest(event.URL)
 		if err != nil {
-			rt.l.WithError(err)
+			rt.l.Error(err)
 		}
 	}
 
@@ -39,7 +39,12 @@ func (rt *reviewTool) handleReviewPullRequest(url *string) error{
 	if url == nil {
 		return fmt.Errorf("the pull request URL is nil")
 	}
-	return ExecCmd(rt.endpoint,"-u",*url)
+	cmd, err := ExecCmd(rt.endpoint, "-u", *url)
+	if err != nil {
+		return err
+	}
+	rt.l.Info(string(cmd))
+	return nil
 }
 
 //HandlePushHook  issue push event processing.
