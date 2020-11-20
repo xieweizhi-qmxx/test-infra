@@ -59,7 +59,7 @@ func CreateScript(scs map[string]ScriptCfg, log *logrus.Entry) []Script {
 	return scripts
 }
 
-func ExecCmd(args ...string)( []byte,error) {
-	command := exec.Command("python3", args...)
+func ExecCmd(ep string,args ...string)( []byte,error) {
+	command := exec.Command(ep, args...)
 	return command.Output()
 }
