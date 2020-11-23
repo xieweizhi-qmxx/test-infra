@@ -90,12 +90,14 @@ func (rt *reviewTool) handlePrReviewComment(comment, url string) error {
 	}
 	params := make([]string, 0, 4)
 	params = append(params, rt.endpoint, "-u", url)
-	if status != "" {
-		params = append(params, "-s", status)
+	if status == "" {
+		return fmt.Errorf("Status parameter not included in the comment ")
 	}
-	if number != "" {
-		params = append(params, "-e", number)
+	params = append(params, "-s", status)
+	if number == "" {
+		return fmt.Errorf("Number list parameter not included in the comment ")
 	}
+	params = append(params, "-e", number)
 	cmd, err := ExecCmd(rt.process, params...)
 	if err != nil {
 		return err
