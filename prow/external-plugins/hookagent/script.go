@@ -12,6 +12,7 @@ const (
 	MergeRequestHookType = "Merge Request Hook"
 	PushHookType         = "Push Hook"
 	PRUpdate             = "update"
+	PROpen               = "open"
 	PRSourceBranchChange = "source_branch_changed"
 )
 
@@ -32,6 +33,7 @@ type Script struct {
 func newScript(s Scenario) Script {
 	return Script{s}
 }
+
 //ExecScript Script processing hook event
 func (t *Script) ExecScript(eventType string, event interface{}) {
 	switch eventType {
@@ -54,6 +56,7 @@ func (t *Script) ExecScript(eventType string, event interface{}) {
 	}
 
 }
+
 //GenScript Generate script based on configuration
 func GenScript(scs map[string]ScriptCfg, log *logrus.Entry) []Script {
 	var scripts []Script
