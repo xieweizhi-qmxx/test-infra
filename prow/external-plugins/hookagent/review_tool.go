@@ -99,10 +99,11 @@ func (rt *reviewTool) handlePrReviewComment(comment, url string) error {
 	}
 	params = append(params, "-e", number)
 	cmd, err := ExecCmd(rt.process, params...)
+	rt.l.Info(string(cmd))
 	if err != nil {
 		return err
 	}
-	rt.l.Info(string(cmd))
+	//rt.l.Info(string(cmd))
 	return nil
 }
 
