@@ -41,10 +41,11 @@ func (rt *reviewTool) handleReviewPullRequest(url *string) error{
 		return fmt.Errorf("the pull request URL is nil")
 	}
 	cmd, err := ExecCmd(rt.process,rt.endpoint,"-u", *url)
+        rt.l.Info(string(cmd))
 	if err != nil {
 		return err
 	}
-	rt.l.Info(string(cmd))
+	//rt.l.Info(string(cmd))
 	return nil
 }
 

@@ -7,7 +7,7 @@ go_library(
         "main.go",
         "script.go",
         "review_tool.go",
-        "config.go"
+        "config.go",
         "server.go",
     ],
     importpath = "k8s.io/test-infra/prow/external-plugins/sync-pr",
@@ -28,7 +28,7 @@ go_library(
     ],
 )
 
-NAME = "hook-agent"
+NAME = "hookagent"
 
 prow_image(
     name = "image",
