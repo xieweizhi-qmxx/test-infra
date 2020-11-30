@@ -3,21 +3,24 @@ package repohandle
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
+
 	sdk "gitee.com/openeuler/go-gitee/gitee"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+
 	prowConfig "k8s.io/test-infra/prow/config"
 	plugins "k8s.io/test-infra/prow/gitee-plugins"
 	"k8s.io/test-infra/prow/pluginhelp"
-	"strings"
+
 )
 
 var cacheFilePath = "RepoHandleCacheConfig.json"
 
 type repoHandle struct {
-	getPluginCfg plugins.GetPluginConfig
 	rhc          *rhClient
-	cache        *cache
+	cache        *cacheProcessedFile
+	getPluginCfg plugins.GetPluginConfig
 }
 
 func NewRepoHandle(f plugins.GetPluginConfig, gec giteeClient) plugins.Plugin {
@@ -116,7 +119,7 @@ func (rh *repoHandle) handleRepoDT(log *logrus.Entry) {
 	}
 }
 
-func (rh *repoHandle) handleRepoConfigFile(file *repoFile, log *logrus.Entry) error {
+func (rh *repoHandle) handleRepoConfigFile(file *cfgFilePath, log *logrus.Entry) error {
 	content, err := rh.rhc.getRealPathContent(file.Owner, file.Repo, file.Path, file.Ref)
 	if err != nil {
 		return err
@@ -260,8 +263,8 @@ func (rh *repoHandle) handleRepoBranchProtected(community string, repository Rep
 	return nil
 }
 
-func (rh *repoHandle) getNeedHandleFiles() ([]repoFile, error) {
-	var repoFiles []repoFile
+func (rh *repoHandle) getNeedHandleFiles() ([]cfgFilePath, error) {
+	var repoFiles []cfgFilePath
 	c, err := rh.getPluginConfig()
 	if err != nil {
 		return repoFiles, err
@@ -287,7 +290,7 @@ func (rh *repoHandle) getNeedHandleFiles() ([]repoFile, error) {
 	return repoFiles, nil
 }
 
-func getPushEventChangeFile(e *sdk.PushEvent, files []repoFile) ([]int, bool) {
+func getPushEventChangeFile(e *sdk.PushEvent, files []cfgFilePath) ([]int, bool) {
 	fns := make(map[string]struct{})
 	var fIdx []int
 	for _, v := range e.Commits {
