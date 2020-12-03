@@ -443,6 +443,12 @@ func (c *client) SetBranchProtected(owner, repo, bName string) (sdk.CompleteBran
 	return branch, err
 }
 
+func (c *client) AddRepositoryMember(owner, repo, username, permission string) error {
+	body := sdk.ProjectMemberPutParam{Permission: permission}
+	_, _, e := c.ac.RepositoriesApi.PutV5ReposOwnerRepoCollaboratorsUsername(context.Background(), owner, repo, username, body)
+	return e
+}
+
 func formatErr(err error, doWhat string) error {
 	if err == nil {
 		return err

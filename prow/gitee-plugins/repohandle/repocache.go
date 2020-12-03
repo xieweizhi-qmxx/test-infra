@@ -64,6 +64,11 @@ func (c *cacheProcessedFile) saveCache(repoFiles []cfgFilePath) error {
 	return err
 }
 
+func (c *cacheProcessedFile) emptyCache() error {
+	rf := make([]cfgFilePath,0)
+	return c.saveCache(rf)
+}
+
 func exist(filename string) bool {
 	_, err := os.Stat(filename)
 	return err == nil || os.IsExist(err)

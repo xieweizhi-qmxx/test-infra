@@ -12,14 +12,14 @@ import (
 	prowConfig "k8s.io/test-infra/prow/config"
 	plugins "k8s.io/test-infra/prow/gitee-plugins"
 	"k8s.io/test-infra/prow/pluginhelp"
-
 )
 
 var cacheFilePath = "RepoHandleCacheConfig.json"
 
 type repoHandle struct {
 	rhc          *rhClient
-	cache        *cacheProcessedFile
+	repoCfgCache *cacheProcessedFile
+	sigCache     *sigCache
 	getPluginCfg plugins.GetPluginConfig
 }
 
@@ -27,7 +27,8 @@ func NewRepoHandle(f plugins.GetPluginConfig, gec giteeClient) plugins.Plugin {
 	return &repoHandle{
 		getPluginCfg: f,
 		rhc:          &rhClient{giteeClient: gec},
-		cache:        newCache(cacheFilePath),
+		repoCfgCache: newCache(cacheFilePath),
+		sigCache:     getSigInstance(),
 	}
 }
 
@@ -56,33 +57,140 @@ func (rh *repoHandle) HandleDefaultTask() {
 			"event-type": "defaultTask",
 		},
 	)
-	err := rh.cache.cacheInit()
+	err := rh.repoCfgCache.cacheInit()
 	if err != nil {
 		log.Error(err)
 	}
-	go rh.handleRepoDT(log)
+	go rh.handleRepoDT(true, log)
 }
 
 func (rh *repoHandle) handlePushEvent(e *sdk.PushEvent, log *logrus.Entry) error {
-	files, err := rh.getNeedHandleFiles()
+	if e == nil {
+		return fmt.Errorf("hook event payload can not be nil")
+	}
+	c, err := rh.getPluginConfig()
 	if err != nil {
 		return err
 	}
-	if len(files) == 0 || e == nil {
+	//Check whether the sig configuration has changed
+	if len(c.RepoHandler.SigFiles) == 0 {
+		log.Debug("not find sig configuration ")
+	} else {
+		sigs, find := getSigCfgChangeFile(e, c.RepoHandler.SigFiles)
+		if find {
+			rh.triggerSigTask(sigs, log)
+		}
+	}
+
+	//check whether the repository configuration has changed
+	files, err := rh.getNeedHandleFiles()
+	if err != nil {
+		log.Error(err)
+	} else if len(files) > 0 {
+		idx, find := getRepoCfgChangeFile(e, files)
+		if find {
+			err = rh.triggerRepoTask(idx, files, log)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+
+	//check  whether the owner configuration has changed
+	if len(c.RepoHandler.OwnerFiles) == 0 {
+		log.Debug("not find owner configuration")
+	} else {
+		oc, find := getOwnersChangeFile(e, c.RepoHandler.OwnerFiles)
+		if find {
+			rh.triggerOwnerTask(oc, log)
+		}
+	}
+
+	return nil
+}
+
+func (rh *repoHandle) triggerSigTask(files []cfgFilePath, log *logrus.Entry) {
+	var sigList []sig
+	for _, v := range files {
+		sigs, e := rh.handleSigConfig(v)
+		if e != nil {
+			log.Error(e)
+		}
+		sigList = append(sigList, sigs...)
+	}
+	if len(sigList) == 0 {
+		return
+	}
+	mReps := rh.sigCache.modify(sigList)
+	if len(mReps) == 0 {
+		return
+	}
+	var err error
+	for _, v := range mReps {
+		err = rh.handleTriggerChangeRepoOwner(v, log)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+func (rh *repoHandle) handleTriggerChangeRepoOwner(fn string, log *logrus.Entry) error {
+	if fn == "" || !strings.Contains(fn, "/") {
+		return fmt.Errorf("illegal repository full name: %s", fn)
+	}
+	sp := strings.Split(fn, "/")
+	if len(sp) != 2 {
+		return fmt.Errorf("illegal repository full name: %s", fn)
+	}
+	repo, ex, err := rh.rhc.existRepo(sp[0], sp[1])
+	if err != nil {
+		return err
+	}
+	if !ex {
+		return fmt.Errorf("%s does not exist ", fn)
+	}
+	err = rh.handleAddOwnerToRepo(&repo, log)
+	return err
+}
+
+func (rh *repoHandle) triggerOwnerTask(sn []string, log *logrus.Entry) {
+	if len(sn) == 0 {
+		return
+	}
+	var mReps []string
+	for _, v := range sn {
+		sp := strings.Split(v, "/")
+		for _, s := range sp {
+			cReps := rh.sigCache.ownerChange(s)
+			if len(cReps) > 0 {
+				mReps = append(mReps, cReps...)
+			}
+		}
+	}
+	if len(mReps) == 0 {
+		return
+	}
+	var err error
+	for _, v := range mReps {
+		err = rh.handleTriggerChangeRepoOwner(v, log)
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+func (rh *repoHandle) triggerRepoTask(idx []int, files []cfgFilePath, log *logrus.Entry) error {
+	if len(files) == 0 || len(idx) == 0 {
 		return nil
 	}
-	//check the push commit file in the need handle files
-	idx, find := getPushEventChangeFile(e, files)
-	if !find {
-		return nil
-	}
+	var err error
 	for k := range idx {
 		err = rh.handleRepoConfigFile(&files[k], log)
 		if err != nil {
 			log.Error(err)
 		}
 	}
-	return rh.cache.saveCache(files)
+	return rh.repoCfgCache.saveCache(files)
 }
 
 func (rh *repoHandle) getPluginConfig() (*configuration, error) {
@@ -98,7 +206,10 @@ func (rh *repoHandle) getPluginConfig() (*configuration, error) {
 	return c, nil
 }
 
-func (rh *repoHandle) handleRepoDT(log *logrus.Entry) {
+func (rh *repoHandle) handleRepoDT(loadSig bool, log *logrus.Entry) {
+	if loadSig {
+		rh.loadSigConfig(log)
+	}
 	files, err := rh.getNeedHandleFiles()
 	if err != nil {
 		log.Error(err)
@@ -113,7 +224,7 @@ func (rh *repoHandle) handleRepoDT(log *logrus.Entry) {
 			log.Error(err)
 		}
 	}
-	err = rh.cache.saveCache(files)
+	err = rh.repoCfgCache.saveCache(files)
 	if err != nil {
 		log.Error(err)
 	}
@@ -193,14 +304,16 @@ func (rh *repoHandle) handleAddRepository(community string, repository Repositor
 	//repo setting
 	err = rh.handleRepositorySetting(&repo, repository)
 	if err != nil {
-		return err
+		log.Error(err)
 	}
-	return nil
+	// add owner
+	err = rh.handleAddOwnerToRepo(&repo, log)
+	return err
 }
 
 func (rh *repoHandle) handleRepositorySetting(repo *sdk.Project, repository Repository) error {
 	if repo == nil {
-		return fmt.Errorf("gitee %s repository is empty", *repository.Name)
+		return fmt.Errorf("gitee %s repository is nil", *repository.Name)
 	}
 	owner := repo.Namespace.Path
 	if owner == "" {
@@ -274,7 +387,7 @@ func (rh *repoHandle) getNeedHandleFiles() ([]cfgFilePath, error) {
 			repoFiles = append(repoFiles, f)
 		}
 	}
-	cacheConfig, err := rh.cache.loadCache()
+	cacheConfig, err := rh.repoCfgCache.loadCache()
 	if err != nil {
 		return repoFiles, nil
 	}
@@ -290,40 +403,106 @@ func (rh *repoHandle) getNeedHandleFiles() ([]cfgFilePath, error) {
 	return repoFiles, nil
 }
 
-func getPushEventChangeFile(e *sdk.PushEvent, files []cfgFilePath) ([]int, bool) {
-	fns := make(map[string]struct{})
-	var fIdx []int
-	for _, v := range e.Commits {
-		if len(v.Added) > 0 {
-			for _, fn := range v.Added {
-				fns[fn] = struct{}{}
-			}
-		}
-		if len(v.Modified) > 0 {
-			for _, fn := range v.Modified {
-				fns[fn] = struct{}{}
-			}
-		}
+func (rh *repoHandle) loadSigConfig(log *logrus.Entry) {
+	c, err := rh.getPluginConfig()
+	if err != nil {
+		log.Error(err)
+		return
 	}
-	if len(fns) == 0 {
-		return fIdx, false
+	if len(c.RepoHandler.SigFiles) == 0 {
+		log.Debug("no sig config")
+		return
 	}
-	find := false
-	for k, v := range files {
-		if e.Repository.Namespace != v.Owner || e.Repository.Name != v.Repo || e.Ref == nil {
+	var sl []sig
+	for _, v := range c.RepoHandler.SigFiles {
+		s, err := rh.handleSigConfig(v)
+		if err != nil {
+			log.Error(err)
 			continue
 		}
-		ref := v.Ref
-		if ref == "" {
-			ref = "master"
-		}
-		if !strings.Contains(*e.Ref, ref) {
-			continue
-		}
-		if _, ex := fns[v.Path]; ex {
-			find = true
-			fIdx = append(fIdx, k)
+		sl = append(sl, s...)
+	}
+	rh.sigCache.init(sl)
+}
+
+func (rh *repoHandle) handleSigConfig(file cfgFilePath) ([]sig, error) {
+	var sl []sig
+	content, err := rh.rhc.getRealPathContent(file.Owner, file.Repo, file.Path, file.Ref)
+	if err != nil {
+		return sl, err
+	}
+	decodeBytes, err := base64.StdEncoding.DecodeString(content.Content)
+	if err != nil {
+		return sl, err
+	}
+	sc := sigCfg{}
+	err = yaml.UnmarshalStrict(decodeBytes, &sc)
+	if err != nil {
+		return sl, err
+	}
+	sl = sc.Sigs
+	return sl, nil
+}
+
+func (rh *repoHandle) loadOwners(sn []string, log *logrus.Entry) map[string]struct{} {
+	rto := make(map[string]struct{})
+	rtoV := struct{}{}
+	c, err := rh.getPluginConfig()
+	if err != nil {
+		log.Error(err)
+		return rto
+	}
+	for _, v := range sn {
+		cs := getOwnerFileCfgBySigName(c.RepoHandler.OwnerFiles, v)
+		for _, c := range cs {
+			owners, err := rh.handleOwnerConfig(c)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			for _, o := range owners {
+				rto[o] = rtoV
+			}
 		}
 	}
-	return fIdx, find
+	return rto
+}
+
+func (rh *repoHandle) handleOwnerConfig(file cfgFilePath) ([]string, error) {
+	var sl []string
+	content, err := rh.rhc.getRealPathContent(file.Owner, file.Repo, file.Path, file.Ref)
+	if err != nil {
+		return sl, err
+	}
+	decodeBytes, err := base64.StdEncoding.DecodeString(content.Content)
+	if err != nil {
+		return sl, err
+	}
+	sc := owner{}
+	err = yaml.UnmarshalStrict(decodeBytes, &sc)
+	return sc.Maintainers, err
+}
+
+func (rh *repoHandle) handleAddOwnerToRepo(repo *sdk.Project, log *logrus.Entry) error {
+	if repo == nil {
+		return fmt.Errorf("handleAddOwnerToRepo: the repo is nil")
+	}
+	sigList := rh.sigCache.loadSigName(repo.FullName)
+	omap := rh.loadOwners(sigList, log)
+	if len(omap) == 0 {
+		return nil
+	}
+	for _, v := range repo.Members {
+		if _, ok := omap[v]; ok {
+			delete(omap, v)
+		}
+	}
+	var err error
+	for k := range omap {
+		err = rh.rhc.AddRepositoryMember(repo.Namespace.Path, repo.Name, k, "pull")
+		if err != nil {
+			log.WithError(err).Error(fmt.Errorf("add member %s fail", k))
+		}
+	}
+	return nil
 }

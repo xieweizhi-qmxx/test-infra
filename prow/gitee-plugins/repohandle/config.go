@@ -20,6 +20,10 @@ type cfgFilePath struct {
 	Hash string `json:"hash,omitempty"`
 }
 
+type sigCfg struct {
+	Sigs []sig `json:"sigCache"`
+}
+
 type sig struct {
 	Name         string   `json:"name"`
 	Repositories []string `json:"repositories"`
