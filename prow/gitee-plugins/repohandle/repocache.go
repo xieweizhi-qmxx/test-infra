@@ -8,23 +8,23 @@ import (
 )
 
 var (
-	instance *cache
+	instance *cacheProcessedFile
 	once     sync.Once
 )
 
-type cache struct {
+type cacheProcessedFile struct {
 	filePath string
 	sync.Mutex
 }
 
-func newCache(filePath string) *cache {
+func newCache(filePath string) *cacheProcessedFile {
 	once.Do(func() {
-		instance = &cache{filePath: filePath}
+		instance = &cacheProcessedFile{filePath: filePath}
 	})
 	return instance
 }
 
-func (c *cache) cacheInit() error {
+func (c *cacheProcessedFile) cacheInit() error {
 	if exist(c.filePath) {
 		return nil
 	}
@@ -36,10 +36,10 @@ func (c *cache) cacheInit() error {
 	return err
 }
 
-func (c *cache) loadCache() ([]repoFile, error) {
+func (c *cacheProcessedFile) loadCache() ([]cfgFilePath, error) {
 	c.Lock()
 	defer c.Unlock()
-	var cacheRepos []repoFile
+	var cacheRepos []cfgFilePath
 	data, err := ioutil.ReadFile(c.filePath)
 	if err != nil {
 		return cacheRepos, err
@@ -48,7 +48,7 @@ func (c *cache) loadCache() ([]repoFile, error) {
 	return cacheRepos, err
 }
 
-func (c *cache) saveCache(repoFiles []repoFile) error {
+func (c *cacheProcessedFile) saveCache(repoFiles []cfgFilePath) error {
 	data, err := json.Marshal(&repoFiles)
 	if err != nil {
 		return err
@@ -62,6 +62,11 @@ func (c *cache) saveCache(repoFiles []repoFile) error {
 	defer file.Close()
 	_, err = file.Write(data)
 	return err
+}
+
+func (c *cacheProcessedFile) emptyCache() error {
+	rf := make([]cfgFilePath,0)
+	return c.saveCache(rf)
 }
 
 func exist(filename string) bool {

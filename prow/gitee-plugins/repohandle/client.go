@@ -15,6 +15,7 @@ type giteeClient interface {
 	CreateBranch(owner, repo, ref, bName string) (sdk.CompleteBranch, error)
 	CancelBranchProtected(owner, repo, bName string) error
 	SetBranchProtected(owner, repo, bName string) (sdk.CompleteBranch, error)
+	AddRepositoryMember(owner,repo,username,permission string) error
 }
 
 type rhClient struct {

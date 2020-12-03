@@ -5,15 +5,32 @@ type configuration struct {
 }
 
 type pluginConfig struct {
-	RepoFiles []repoFile `json:"repoFiles"`
+	RepoFiles  []cfgFilePath `json:"repoFiles"`
+	SigFiles   []cfgFilePath `json:"sigFiles"`
+	OwnerFiles []cfgFilePath `json:"ownerFiles"`
 }
 
-type repoFile struct {
+//cfgFilePath configuration of the location of the repository, owner and sig group configuration files
+type cfgFilePath struct {
 	Owner string `json:"owner,omitempty"`
 	Repo  string `json:"repo,omitempty"`
 	Path  string `json:"path,omitempty"`
 	Ref   string `json:"ref,omitempty"`
-	Hash  string `json:"hash,omitempty"`
+	//Hash is only used for caching and does not need to be configured in the configuration file.
+	Hash string `json:"hash,omitempty"`
+}
+
+type sigCfg struct {
+	Sigs []sig `json:"sigCache"`
+}
+
+type sig struct {
+	Name         string   `json:"name"`
+	Repositories []string `json:"repositories"`
+}
+
+type owner struct {
+	Maintainers []string `json:"maintainers"`
 }
 
 type Repository struct {
@@ -42,7 +59,7 @@ type Repos struct {
 	Repositories []Repository `json:"repositories"`
 }
 
-func (rf repoFile) equal(d repoFile) bool {
+func (rf cfgFilePath) equal(d cfgFilePath) bool {
 	return rf.Owner == d.Owner && rf.Repo == d.Repo && rf.Path == d.Path && rf.Ref == d.Ref
 }
 
