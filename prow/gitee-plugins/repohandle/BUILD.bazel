@@ -7,7 +7,7 @@ go_library(
         "repocache.go",
         "config.go",
         "client.go",
-        "repohandle.go"
+        "repohandle.go",
         "util.go"
     ],
     importpath = "k8s.io/test-infra/prow/gitee-plugins/repohandle",
