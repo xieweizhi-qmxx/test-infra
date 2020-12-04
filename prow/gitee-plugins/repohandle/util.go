@@ -143,3 +143,28 @@ func getOwnerFileCfgBySigName(ofs []cfgFilePath, sn string) []cfgFilePath {
 	}
 	return rf
 }
+
+func getLegalCfgFile(fps map[string]struct{},cfs []cfgFilePath) []cfgFilePath {
+	lfs := make([]cfgFilePath,0,len(cfs))
+	if len(fps) == 0 || len(cfs) == 0 {
+		return lfs
+	}
+	mr := make(map[int]struct{})
+	for i,v := range cfs  {
+		for k := range fps {
+			fp := ""
+			if strings.Contains(k,"/"){
+				fp = v.Owner+"/"+v.Repo
+			}else {
+				fp = v.Owner
+			}
+			if fp == k {
+				mr[i] = fps[k]
+			}
+		}
+	}
+	for k := range mr {
+		lfs = append(lfs, cfs[k])
+	}
+	return lfs
+}

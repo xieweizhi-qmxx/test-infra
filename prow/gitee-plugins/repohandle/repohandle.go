@@ -16,16 +16,20 @@ import (
 
 var cacheFilePath = "RepoHandleCacheConfig.json"
 
+type getAllConf func() *plugins.Configurations
+
 type repoHandle struct {
 	rhc          *rhClient
 	repoCfgCache *cacheProcessedFile
 	sigCache     *sigCache
 	getPluginCfg plugins.GetPluginConfig
+	getAllConf   getAllConf
 }
 
-func NewRepoHandle(f plugins.GetPluginConfig, gec giteeClient) plugins.Plugin {
+func NewRepoHandle(f plugins.GetPluginConfig, f1 getAllConf, gec giteeClient) plugins.Plugin {
 	return &repoHandle{
 		getPluginCfg: f,
+		getAllConf:   f1,
 		rhc:          &rhClient{giteeClient: gec},
 		repoCfgCache: newCache(cacheFilePath),
 		sigCache:     getSigInstance(),
@@ -376,13 +380,41 @@ func (rh *repoHandle) handleRepoBranchProtected(community string, repository Rep
 	return nil
 }
 
+//getOwnerPluginOrg Organization that owns this plugin
+func (rh *repoHandle) getOwnerPluginOrg() map[string]struct{} {
+	conf := rh.getAllConf()
+	empty := struct{}{}
+	orgs := make(map[string]struct{}, 0)
+	if conf == nil {
+		return orgs
+	}
+	for k := range conf.Plugins {
+		contain := false
+		if len(conf.Plugins[k]) == 0 {
+			continue
+		}
+		for _, p := range conf.Plugins[k] {
+			if p == rh.PluginName() {
+				contain = true
+				break
+			}
+		}
+		if !contain {
+			continue
+		}
+		orgs[k] = empty
+	}
+	return orgs
+}
+
 func (rh *repoHandle) getNeedHandleFiles() ([]cfgFilePath, error) {
 	var repoFiles []cfgFilePath
 	c, err := rh.getPluginConfig()
 	if err != nil {
 		return repoFiles, err
 	}
-	for _, f := range c.RepoHandler.RepoFiles {
+	cfs := getLegalCfgFile(rh.getOwnerPluginOrg(), c.RepoHandler.RepoFiles)
+	for _, f := range cfs {
 		if f.Owner != "" && f.Repo != "" && f.Path != "" {
 			repoFiles = append(repoFiles, f)
 		}
