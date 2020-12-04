@@ -34,7 +34,7 @@ type Server interface {
 
 type Dispatcher interface {
 	Wait()
-	Dispatch(eventType, eventGUID string, payload []byte, h http.Header) error
+	Dispatch(eventType, eventGUID string, payload []byte) error
 }
 
 // ValidateWebhook ensures that the provided request conforms to the
@@ -96,7 +96,7 @@ func (s *server) demuxEvent(eventType, eventGUID string, payload []byte, h http.
 		counter.Inc()
 	}
 
-	return s.dispatcher.Dispatch(eventType, eventGUID, payload, h)
+	return s.dispatcher.Dispatch(eventType, eventGUID, payload)
 }
 
 // GracefulShutdown implements a graceful shutdown protocol. It handles all requests sent before
