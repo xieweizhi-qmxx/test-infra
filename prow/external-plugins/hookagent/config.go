@@ -74,7 +74,7 @@ func load(path string) (hookAgentConfig, error) {
 	if err != nil {
 		return c, err
 	}
-	if err := yaml.Unmarshal(b, &c); err != nil {
+	if err = yaml.Unmarshal(b, &c); err != nil {
 		return c, err
 	}
 	err = c.validate()
