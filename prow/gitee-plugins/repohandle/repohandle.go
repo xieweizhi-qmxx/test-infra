@@ -3,7 +3,9 @@ package repohandle
 import (
 	"encoding/base64"
 	"fmt"
+	"k8s.io/test-infra/prow/interrupts"
 	"strings"
+	"time"
 
 	sdk "gitee.com/openeuler/go-gitee/gitee"
 	"github.com/sirupsen/logrus"
@@ -65,7 +67,12 @@ func (rh *repoHandle) HandleDefaultTask() {
 	if err != nil {
 		log.Error(err)
 	}
-	go rh.handleRepoDT(true, log)
+	interrupts.Tick(func() {
+		rh.handleRepoDT(true, log)
+	}, func() time.Duration {
+		return time.Hour * 12
+	})
+	//go rh.handleRepoDT(true, log)
 }
 
 func (rh *repoHandle) handlePushEvent(e *sdk.PushEvent, log *logrus.Entry) error {
@@ -255,37 +262,47 @@ func (rh *repoHandle) handleRepoConfigFile(file *cfgFilePath, log *logrus.Entry)
 	if rc.Community == "" || len(rc.Repositories) == 0 {
 		return fmt.Errorf("repos configuration error")
 	}
+	canCache := true
 	for _, v := range rc.Repositories {
-		err = rh.handleAddRepository(rc.Community, v, log)
+		err, status := rh.handleAddRepository(rc.Community, v, log)
+		if !status {
+			canCache = status
+		}
 		if err != nil {
 			log.Error(err)
 		}
 	}
-	file.Hash = content.Sha
+	if canCache {
+		file.Hash = content.Sha
+	}
 	return nil
 }
 
-func (rh *repoHandle) handleAddRepository(community string, repository Repository, log *logrus.Entry) error {
+func (rh *repoHandle) handleAddRepository(community string, repository Repository, log *logrus.Entry) (error, bool) {
+	dc := true
 	repo, ex, err := rh.rhc.existRepo(community, *repository.Name)
 	if err != nil {
-		return err
+		return err, false
 	}
 	//handle rename repo first
 	if !ex && repository.RenameFrom != nil && (*repository.RenameFrom) != "" {
 		rnRepo, exist, err := rh.rhc.existRepo(community, *repository.RenameFrom)
 		if err != nil {
-			return err
+			return err, false
 		}
 		if !exist {
-			return fmt.Errorf("repository defined by rename_from does not exist: %s ", *repository.RenameFrom)
+			return fmt.Errorf("repository defined by rename_from does not exist: %s ", *repository.RenameFrom), false
 		}
-		return rh.rhc.updateRepoName(community, rnRepo.Name, *repository.Name)
+		err = rh.rhc.updateRepoName(community, rnRepo.Name, *repository.Name)
+		if err != nil {
+			return err, false
+		}
 	}
 	if !ex {
 		//add repo on gitee
 		repo, err = rh.rhc.createRepo(community, *repository.Name, *repository.Description, *repository.Type, repository.AutoInit)
 		if err != nil {
-			return err
+			return err, false
 		}
 		// add branch on repo
 		if len(repository.ProtectedBranches) > 0 {
@@ -293,6 +310,7 @@ func (rh *repoHandle) handleAddRepository(community string, repository Repositor
 				if v != "" && v != repo.DefaultBranch {
 					_, err = rh.rhc.giteeClient.CreateBranch(community, repo.Name, repo.DefaultBranch, v)
 					if err != nil {
+						dc = false
 						log.Error(err)
 					}
 				}
@@ -303,16 +321,21 @@ func (rh *repoHandle) handleAddRepository(community string, repository Repositor
 	//setting branch
 	err = rh.handleRepoBranchProtected(community, repository)
 	if err != nil {
+		dc = false
 		log.Error(err)
 	}
 	//repo setting
 	err = rh.handleRepositorySetting(&repo, repository)
 	if err != nil {
+		dc = false
 		log.Error(err)
 	}
 	// add owner
 	err = rh.handleAddOwnerToRepo(&repo, log)
-	return err
+	if err != nil {
+		dc = false
+	}
+	return err, dc
 }
 
 func (rh *repoHandle) handleRepositorySetting(repo *sdk.Project, repository Repository) error {
