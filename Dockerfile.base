@@ -9,7 +9,7 @@ RUN apt update \
     && apt clean \
     && ln -s /usr/bin/bazel-2.2.0 /usr/bin/bazel && bazel version
 WORKDIR /usr/local
-COPY ./test-infra ./test-infra
+COPY .  ./test-infra
 RUN cd test-infra \
     && bazel build prow/cmd/gitee-hook \
     && cd ../ &&  rm -r test-infra
