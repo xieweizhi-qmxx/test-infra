@@ -1,4 +1,4 @@
-FROM prow/bazel2-env:latest as builder
+FROM swr.ap-southeast-1.myhuaweicloud.com/opensourceway/prow/bazel2-env:latest as builder
 LABEL maintainer="Xie Weizhi" description="The prow module shares image"
 ARG BPATH=prow/cmd/gitee-hook
 WORKDIR test-infra
