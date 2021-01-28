@@ -24,6 +24,7 @@ type Client interface {
 	AddPRLabel(org, repo string, number int, label string) error
 	RemovePRLabel(org, repo string, number int, label string) error
 
+	ClosePR(owner, repo string, number int) error
 	AssignPR(owner, repo string, number int, logins []string) error
 	UnassignPR(owner, repo string, number int, logins []string) error
 	AssignGiteeIssue(org, repo string, number string, login string) error
@@ -38,6 +39,15 @@ type Client interface {
 	MergePR(owner, repo string, number int, opt sdk.PullRequestMergePutParam) error
 
 	GetRepos(org string) ([]sdk.Project, error)
+	CloseIssue(owner, repo string, number string) error
+	UpdateIssue(owner, number string, param sdk.IssueUpdateParam) (sdk.Issue, error)
+	GetIssues(org, repo string, opts ListIssueOpt) ([]sdk.Issue, error)
+	GetIssue(org, repo, number string) (sdk.Issue, error)
+	AddIssueLabel(org, repo, number, label string) error
+	RemoveIssueLabel(org, repo, number, label string) error
+	GetIssueLabels(org, repo, number string) ([]sdk.Label, error)
+	ReopenIssue(owner, repo string, number string) error
+
 }
 
 type ListPullRequestOpt struct {
@@ -48,4 +58,11 @@ type ListPullRequestOpt struct {
 	Direction       string
 	MilestoneNumber int
 	Labels          []string
+}
+
+type ListIssueOpt struct {
+	State     string
+	Labels    string
+	Sort      string
+	Direction string
 }

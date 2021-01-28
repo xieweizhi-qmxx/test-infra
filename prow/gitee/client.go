@@ -286,6 +286,11 @@ func (c *client) RemovePRLabel(org, repo string, number int, label string) error
 	return formatErr(err, "remove label of pr")
 }
 
+func (c *client) ClosePR(org, repo string, number int) error {
+	_, err := c.UpdatePullRequest(org, repo, int32(number), "", "", "closed", "")
+	return err
+}
+
 func (c *client) AssignPR(org, repo string, number int, logins []string) error {
 	opt := sdk.PullRequestAssigneePostParam{Assignees: strings.Join(logins, ",")}
 
@@ -395,6 +400,84 @@ func (c *client) GetRepos(org string) ([]sdk.Project, error) {
 	}
 
 	return r, nil
+}
+
+func (c *client) CloseIssue(owner, repo string, number string) error {
+	opt := sdk.IssueUpdateParam{
+		Repo:  repo,
+		State: "closed",
+	}
+	_, err := c.UpdateIssue(owner, number, opt)
+	return err
+}
+
+func (c *client) ReopenIssue(owner, repo string, number string) error {
+	opt := sdk.IssueUpdateParam{
+		Repo:  repo,
+		State: "open",
+	}
+	_, err := c.UpdateIssue(owner, number, opt)
+	return err
+}
+
+func (c *client) UpdateIssue(owner, number string, param sdk.IssueUpdateParam) (sdk.Issue, error) {
+	issue, _, err := c.ac.IssuesApi.PatchV5ReposOwnerIssuesNumber(context.Background(), owner, number, param)
+	return issue, err
+}
+
+func (c *client) GetIssues(org, repo string, opts ListIssueOpt) ([]sdk.Issue, error) {
+	var result []sdk.Issue
+	setStr := func(t *optional.String, v string) {
+		if v != "" {
+			*t = optional.NewString(v)
+		}
+	}
+
+	opt := sdk.GetV5ReposOwnerRepoIssuesOpts{}
+	setStr(&opt.Sort, opts.Sort)
+	setStr(&opt.Direction, opts.Direction)
+	setStr(&opt.Labels, opts.Labels)
+	setStr(&opt.State, opts.State)
+
+	p := int32(1)
+	for {
+		opt.Page = optional.NewInt32(p)
+		issues, _, err := c.ac.IssuesApi.GetV5ReposOwnerRepoIssues(context.Background(), org, repo, &opt)
+		if err != nil {
+			return nil, formatErr(err, "get issues ")
+		}
+
+		if len(issues) == 0 {
+			break
+		}
+
+		p += 1
+
+		result = append(result, issues...)
+	}
+	return result, nil
+}
+
+func (c *client) GetIssue(org, repo, number string) (sdk.Issue, error) {
+	issue, _, err := c.ac.IssuesApi.GetV5ReposOwnerRepoIssuesNumber(context.Background(), org, repo, number, nil)
+	return issue, err
+}
+
+func (c *client) AddIssueLabel(org, repo, number, label string) error {
+	opt := &sdk.PostV5ReposOwnerRepoIssuesNumberLabelsOpts{Body: optional.NewInterface([]string{label})}
+	_, _, err := c.ac.LabelsApi.PostV5ReposOwnerRepoIssuesNumberLabels(context.Background(), org, repo, number, opt)
+	return err
+}
+
+func (c *client) RemoveIssueLabel(org, repo, number, label string) error {
+	label = strings.Replace(label, "/", "%2F", -1)
+	_, err := c.ac.LabelsApi.DeleteV5ReposOwnerRepoIssuesNumberLabelsName(context.Background(), org, repo, number, label, nil)
+	return err
+}
+
+func (c *client) GetIssueLabels(org, repo, number string) ([]sdk.Label, error) {
+	labels, _, err := c.ac.LabelsApi.GetV5ReposOwnerRepoIssuesNumberLabels(context.Background(), org, repo, number, nil)
+	return labels, err
 }
 
 func formatErr(err error, doWhat string) error {
