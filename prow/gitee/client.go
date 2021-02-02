@@ -397,6 +397,19 @@ func (c *client) GetRepos(org string) ([]sdk.Project, error) {
 	return r, nil
 }
 
+
+func (c *client) AddIssueLabel(org, repo, number, label string) error {
+	opt := &sdk.PostV5ReposOwnerRepoIssuesNumberLabelsOpts{Body: optional.NewInterface([]string{label})}
+	_, _, err := c.ac.LabelsApi.PostV5ReposOwnerRepoIssuesNumberLabels(context.Background(), org, repo, number, opt)
+	return err
+}
+
+func (c *client) RemoveIssueLabel(org, repo, number, label string) error {
+	label = strings.Replace(label, "/", "%2F", -1)
+	_, err := c.ac.LabelsApi.DeleteV5ReposOwnerRepoIssuesNumberLabelsName(context.Background(), org, repo, number, label, nil)
+	return err
+}
+
 func formatErr(err error, doWhat string) error {
 	if err == nil {
 		return err

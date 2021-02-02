@@ -38,6 +38,9 @@ type Client interface {
 	MergePR(owner, repo string, number int, opt sdk.PullRequestMergePutParam) error
 
 	GetRepos(org string) ([]sdk.Project, error)
+	RemoveIssueLabel(org, repo, number, label string) error
+	AddIssueLabel(org, repo, number, label string) error
+
 }
 
 type ListPullRequestOpt struct {
